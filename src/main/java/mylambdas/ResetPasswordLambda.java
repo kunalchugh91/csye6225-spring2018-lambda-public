@@ -35,7 +35,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
         String TEXTBODY = "This email was sent through Amazon SES ";
         String userid = "";
 
-        long currenttime = new Date().getTime();
+
 
 
         // get the userid passed in the snsEvent
@@ -58,7 +58,11 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
         Table table = dynamoDB.getTable("csye6225");
 
+
+
         // number of seconds elapsed since 12:00:00 AM January 1st, 1970 UTC.
+        long currenttime = new Date().getTime();
+
 
 
         QuerySpec spec = new QuerySpec()
