@@ -13,16 +13,48 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 
+
+
+import java.io.IOException;
+
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
+import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder;
+import com.amazonaws.services.simpleemail.model.Body;
+import com.amazonaws.services.simpleemail.model.Content;
+import com.amazonaws.services.simpleemail.model.Destination;
+import com.amazonaws.services.simpleemail.model.Message;
+import com.amazonaws.services.simpleemail.model.SendEmailRequest;
+
 import java.util.Date;
 import java.util.Iterator;
 
-public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object> {
+public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
+{
 
 
-    public Object handleRequest(SNSEvent snsEvent, Context context) {
+    public Object handleRequest(SNSEvent snsEvent, Context context)
+    {
+
+
+        String FROM = "";
+        String SUBJECT = "Email Reset Request";
+        String TEXTBODY = "This email was sent through Amazon SES ";
+        String userid = "";
+
+        long currenttime = new Date().getTime();
+
 
         // get the userid passed in the snsEvent
-        String userid = "";
+        Iterator<SNSEvent.SNSRecord> it = snsEvent.getRecords().iterator();
+        if (it.hasNext())
+        {
+            SNSEvent.SNSRecord record = it.next();
+            SNSEvent.SNS sns = record.getSNS();
+            userid = sns.getMessageAttributes().get("to_email").getValue();
+            FROM = sns.getMessageAttributes().get("from_email").getValue();
+        }
+
 
         // set up dynamoDB client
         AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
@@ -34,7 +66,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object> {
         Table table = dynamoDB.getTable("csye6225");
 
         // number of seconds elapsed since 12:00:00 AM January 1st, 1970 UTC.
-        long currenttime = new Date().getTime();
+
 
         QuerySpec spec = new QuerySpec()
                 .withKeyConditionExpression("userid = :v_uid")
@@ -49,7 +81,8 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object> {
         Iterator<Item> iterator = items.iterator();
 
         // if token does not already exist
-        if (!iterator.hasNext()) {
+        if (!iterator.hasNext())
+        {
             // insert item into dynamo db
             Item item = new Item()
                     .withPrimaryKey("userid", userid)
@@ -60,6 +93,34 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object> {
             
 
             // send email to user
+
+            try
+            {
+                AmazonSimpleEmailService client_email =
+                        AmazonSimpleEmailServiceClientBuilder.standard()
+                                // Replace US_WEST_2 with the AWS Region you're using for
+                                // Amazon SES.
+                                .withRegion(Regions.US_EAST_1).build();
+                SendEmailRequest request = new SendEmailRequest()
+                        .withDestination(
+                                new Destination().withToAddresses(userid))
+                        .withMessage(new Message()
+                                .withBody(new Body()
+                                        .withText(new Content()
+                                                .withCharset("UTF-8").withData(TEXTBODY)))
+                                .withSubject(new Content()
+                                        .withCharset("UTF-8").withData(SUBJECT)))
+                        .withSource(FROM);
+
+
+                client_email.sendEmail(request);
+
+            }
+            catch (Exception ex)
+            {
+                System.out.println("The email was not sent. Error message: "+ ex.getMessage());
+            }
+
 
         }
 
