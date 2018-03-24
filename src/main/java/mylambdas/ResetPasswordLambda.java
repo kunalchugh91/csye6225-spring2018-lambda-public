@@ -73,7 +73,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
                 .withKeyConditionExpression("userid = :v_uid and expirationtime > :v_currenttime")
                 .withValueMap(new ValueMap()
                         .withString(":v_uid", userid)
-                        .withString(":v_currenttime", Long.toString(currenttime)));
+                        .withNumber(":v_currenttime", currenttime));
 
         /*
         spec.withMaxResultSize(1);
