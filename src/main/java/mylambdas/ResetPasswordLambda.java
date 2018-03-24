@@ -44,8 +44,12 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
         {
             SNSEvent.SNSRecord record = it.next();
             SNSEvent.SNS sns = record.getSNS();
+            TEXTBODY = sns.getMessage();
+            System.out.println("TEXTBODY "+TEXTBODY);
             userid = sns.getMessageAttributes().get("to_email").getValue();
+            System.out.println("userid "+userid);
             FROM = sns.getMessageAttributes().get("from_email").getValue();
+            System.out.println("FROM "+FROM);
         }
 
 
