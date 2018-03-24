@@ -65,7 +65,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
 
         // number of seconds elapsed since 12:00:00 AM January 1st, 1970 UTC.
-        long currenttime = new Date().getTime();
+        Long currenttime = new Long(new Date().getTime());
 
 
 
@@ -91,7 +91,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
             // insert item into dynamo db
             Item item = new Item()
                     .withPrimaryKey("userid", userid)
-                    .withPrimaryKey("expirationtime", Long.toString(new Date().getTime()));
+                    .withPrimaryKey("expirationtime", currenttime);
 
             // put the item into table
             PutItemOutcome outcome = table.putItem(item);
