@@ -66,11 +66,15 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
 
         QuerySpec spec = new QuerySpec()
-                .withKeyConditionExpression("userid = :v_uid")
-                .withFilterExpression("expirationtime > :v_currenttime")
+                .withKeyConditionExpression("userid = :v_uid and expirationtime > :v_currenttime")
                 .withValueMap(new ValueMap()
                         .withString(":v_uid", userid)
                         .withString(":v_currenttime", Long.toString(currenttime)));
+
+        /*
+        spec.withMaxResultSize(1);
+        spec.withScanIndexForward(false);
+        */
 
 
         ItemCollection<QueryOutcome> items = table.query(spec);
