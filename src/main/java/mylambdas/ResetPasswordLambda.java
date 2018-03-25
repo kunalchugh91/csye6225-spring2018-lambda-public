@@ -21,6 +21,7 @@ import com.amazonaws.services.simpleemail.model.SendEmailRequest;
 
 import java.util.Date;
 import java.util.Iterator;
+import java.util.UUID;
 
 public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 {
@@ -32,11 +33,8 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
         String FROM = "";
         String SUBJECT = "Email Reset Request";
-        String TEXTBODY = "This email was sent through Amazon SES ";
+        String TEXTBODY = "";
         String userid = "";
-
-
-
 
         // get the userid passed in the snsEvent
         Iterator<SNSEvent.SNSRecord> it = snsEvent.getRecords().iterator();
@@ -44,12 +42,15 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
         {
             SNSEvent.SNSRecord record = it.next();
             SNSEvent.SNS sns = record.getSNS();
-            TEXTBODY = sns.getMessage();
+            TEXTBODY = sns.getMessage();            
+
+            String uuid = UUID.randomUUID().toString();
+            TEXTBODY += uuid;
+
             System.out.println("TEXTBODY "+TEXTBODY);
+
             userid = sns.getMessageAttributes().get("to_email").getValue();
-            System.out.println("userid "+userid);
             FROM = sns.getMessageAttributes().get("from_email").getValue();
-            System.out.println("FROM "+FROM);
         }
 
 
@@ -62,24 +63,17 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
         Table table = dynamoDB.getTable("csye6225");
 
-
-
         // number of seconds elapsed since 12:00:00 AM January 1st, 1970 UTC.
         Long currenttime = new Long(new Date().getTime());
 
-
+        //Adding 20 mins to current time
+        Long expirationtime = currenttime + 1200000;
 
         QuerySpec spec = new QuerySpec()
-                .withKeyConditionExpression("userid = :v_uid and expirationtime > :v_currenttime")
+                .withKeyConditionExpression("userid = :v_uid and expirationtime < :v_currenttime")
                 .withValueMap(new ValueMap()
                         .withString(":v_uid", userid)
                         .withNumber(":v_currenttime", currenttime));
-
-        /*
-        spec.withMaxResultSize(1);
-        spec.withScanIndexForward(false);
-        */
-
 
         ItemCollection<QueryOutcome> items = table.query(spec);
 
@@ -91,20 +85,16 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
             // insert item into dynamo db
             Item item = new Item()
                     .withPrimaryKey("userid", userid)
-                    .withPrimaryKey("expirationtime", currenttime);
+                    .withPrimaryKey("expirationtime", expirationtime);
 
             // put the item into table
-            PutItemOutcome outcome = table.putItem(item);
-            
+            PutItemOutcome outcome = table.putItem(item);            
 
             // send email to user
-
             try
             {
                 AmazonSimpleEmailService client_email =
                         AmazonSimpleEmailServiceClientBuilder.standard()
-                                // Replace US_WEST_2 with the AWS Region you're using for
-                                // Amazon SES.
                                 .withRegion(Regions.US_EAST_1).build();
                 SendEmailRequest request = new SendEmailRequest()
                         .withDestination(
@@ -117,19 +107,13 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
                                         .withCharset("UTF-8").withData(SUBJECT)))
                         .withSource(FROM);
 
-
                 client_email.sendEmail(request);
-
             }
             catch (Exception ex)
             {
                 System.out.println("The email was not sent. Error message: "+ ex.getMessage());
             }
-
-
         }
-
-
         return null;
     }
 }
