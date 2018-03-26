@@ -35,6 +35,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
         String SUBJECT = "Email Reset Request";
         String TEXTBODY = "";
         String userid = "";
+        String uuid = "";
 
         // get the userid passed in the snsEvent
         Iterator<SNSEvent.SNSRecord> it = snsEvent.getRecords().iterator();
@@ -44,7 +45,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
             SNSEvent.SNS sns = record.getSNS();
             TEXTBODY = sns.getMessage();            
 
-            String uuid = UUID.randomUUID().toString();
+            uuid = UUID.randomUUID().toString();
             TEXTBODY += uuid;
 
             System.out.println("TEXTBODY "+TEXTBODY);
@@ -68,7 +69,7 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
         currenttime /= 1000;
 
         //Adding 20 mins to current time
-        Long expirationtime = currenttime + 60;
+        Long expirationtime = currenttime + 1200;
 
         QuerySpec spec = new QuerySpec()
                 .withKeyConditionExpression("userid = :v_uid and expirationtime > :v_currenttime")
@@ -86,7 +87,8 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
             // insert item into dynamo db
             Item item = new Item()
                     .withPrimaryKey("userid", userid)
-                    .withPrimaryKey("expirationtime", expirationtime);
+                    .withPrimaryKey("expirationtime", expirationtime)
+                    .withString("token", uuid);
 
             // put the item into table
             PutItemOutcome outcome = table.putItem(item);            
