@@ -65,12 +65,13 @@ public class ResetPasswordLambda implements RequestHandler<SNSEvent, Object>
 
         // number of seconds elapsed since 12:00:00 AM January 1st, 1970 UTC.
         Long currenttime = new Long(new Date().getTime());
+        currenttime /= 1000;
 
         //Adding 20 mins to current time
-        Long expirationtime = currenttime + 1200000;
+        Long expirationtime = currenttime + 60;
 
         QuerySpec spec = new QuerySpec()
-                .withKeyConditionExpression("userid = :v_uid and expirationtime < :v_currenttime")
+                .withKeyConditionExpression("userid = :v_uid and expirationtime > :v_currenttime")
                 .withValueMap(new ValueMap()
                         .withString(":v_uid", userid)
                         .withNumber(":v_currenttime", currenttime));
